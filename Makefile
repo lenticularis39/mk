@@ -1,7 +1,7 @@
 GCCGO=gccgo
 MK_SRCFILES=lex.go parse.go rules.go expand.go graph.go mk.go recipe.go
 
-mk: $(MK_OBJFILES)
+mk: $(MK_SRCFILES)
 	$(GCCGO) $(LDFLAGS) $(MK_SRCFILES) -o mk
 
 install: mk
