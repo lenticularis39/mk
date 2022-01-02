@@ -7,3 +7,5 @@ mk: $(MK_OBJFILES)
 install: mk
 	install -c mk $(prefix)/bin/mk
 
+clean:
+	rm -f mk
