@@ -55,9 +55,6 @@ import (
 	"sync"
 )
 
-// True if messages should be printed without fancy colors.
-var nocolor bool = true
-
 // True if we are ignoring timestamps and rebuilding everything.
 var rebuildall bool = false
 
@@ -290,57 +287,31 @@ func mkError(msg string) {
 }
 
 func mkPrintError(msg string) {
-	if !nocolor {
-		os.Stderr.WriteString(ansiTermRed)
-	}
 	fmt.Fprintf(os.Stderr, "%s\n", msg)
-	if !nocolor {
-		os.Stderr.WriteString(ansiTermDefault)
-	}
 }
 
 func mkPrintSuccess(msg string) {
-	if nocolor {
-		fmt.Println(msg)
-	} else {
-		fmt.Printf("%s%s%s\n", ansiTermGreen, msg, ansiTermDefault)
-	}
+	fmt.Println(msg)
 }
 
 func mkPrintMessage(msg string) {
 	mkMsgMutex.Lock()
-	if nocolor {
-		fmt.Println(msg)
-	} else {
-		fmt.Printf("%s%s%s\n", ansiTermBlue, msg, ansiTermDefault)
-	}
+	fmt.Println(msg)
 	mkMsgMutex.Unlock()
 }
 
 func mkPrintRecipe(target string, recipe string, quiet bool) {
 	mkMsgMutex.Lock()
-	if nocolor {
-		fmt.Printf("%s: ", target)
-	} else {
-		fmt.Printf("%s%s%s → %s",
-			ansiTermBlue+ansiTermBright+ansiTermUnderline, target,
-			ansiTermDefault, ansiTermBlue)
-	}
+	fmt.Printf("%s: ", target)
 	if quiet {
-		if nocolor {
-			fmt.Println("...")
-		} else {
-			fmt.Println("…")
-		}
+		fmt.Println("...")
 	} else {
 		printIndented(os.Stdout, recipe, len(target)+3)
 		if len(recipe) == 0 {
 			os.Stdout.WriteString("\n")
 		}
 	}
-	if !nocolor {
-		os.Stdout.WriteString(ansiTermDefault)
-	}
+
 	mkMsgMutex.Unlock()
 }
 
