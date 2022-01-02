@@ -59,7 +59,7 @@ type attribSet struct {
 	delFailed       bool // delete targets when the recipe fails
 	nonstop         bool // don't stop if the recipe fails
 	forcedTimestamp bool // update timestamp whether the recipe does or not
-	nonvirtual      bool // a meta-rule that will only match files
+	nonVirtual      bool // a meta-rule that will only match files
 	quiet           bool // don't print the recipe
 	regex           bool // regular expression meta-rule
 	update          bool // treat the targets as if they were updated
@@ -74,7 +74,7 @@ type attribError struct {
 
 // target and rereq patterns
 type pattern struct {
-	issuffix bool           // is a suffix '%' rule, so we should define $stem.
+	isSuffix bool           // is a suffix '%' rule, so we should define $stem.
 	spat     string         // simple string pattern
 	rpat     *regexp.Regexp // non-nil if this is a regexp pattern
 }
@@ -101,7 +101,7 @@ type rule struct {
 	shell      []string  // command used to execute the recipe
 	recipe     string    // recipe source
 	command    []string  // command attribute
-	ismeta     bool      // is this a meta rule
+	isMeta     bool      // is this a meta rule
 	file       string    // file where the rule is defined
 	line       int       // line number on which the rule is defined
 }
@@ -130,7 +130,7 @@ type ruleSet struct {
 	vars  map[string][]string
 	rules []rule
 	// map a target to an array of indexes into rules
-	targetrules map[string][]int
+	targetRules map[string][]int
 }
 
 // Read attributes for an array of strings, updating the rule.
@@ -148,7 +148,7 @@ func (r *rule) parseAttribs(inputs []string) *attribError {
 			case 'N':
 				r.attributes.forcedTimestamp = true
 			case 'n':
-				r.attributes.nonvirtual = true
+				r.attributes.nonVirtual = true
 			case 'Q':
 				r.attributes.quiet = true
 			case 'R':
@@ -190,8 +190,8 @@ func (rs *ruleSet) add(r rule) {
 	k := len(rs.rules) - 1
 	for i := range r.targets {
 		if r.targets[i].rpat == nil {
-			rs.targetrules[r.targets[i].spat] =
-				append(rs.targetrules[r.targets[i].spat], k)
+			rs.targetRules[r.targets[i].spat] =
+				append(rs.targetRules[r.targets[i].spat], k)
 		}
 	}
 }

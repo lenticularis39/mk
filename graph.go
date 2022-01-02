@@ -118,7 +118,7 @@ func (u *node) updateTimestamp() {
 		}
 	}
 
-	if rebuildall {
+	if rebuildAll {
 		u.flags |= nodeFlagProbable
 	}
 }
@@ -177,7 +177,7 @@ func applyrules(rs *ruleSet, g *graph, target string, rulecnt []int) *node {
 
 	// does the target match a concrete rule?
 
-	ks, ok := rs.targetrules[target]
+	ks, ok := rs.targetRules[target]
 	if ok {
 		for ki := range ks {
 			k := ks[ki]
@@ -188,7 +188,7 @@ func applyrules(rs *ruleSet, g *graph, target string, rulecnt []int) *node {
 			r := &rs.rules[k]
 
 			// skip meta-rules
-			if r.ismeta {
+			if r.isMeta {
 				continue
 			}
 
@@ -218,7 +218,7 @@ func applyrules(rs *ruleSet, g *graph, target string, rulecnt []int) *node {
 
 		r := &rs.rules[k]
 
-		if !r.ismeta {
+		if !r.isMeta {
 			continue
 		}
 
@@ -305,7 +305,7 @@ func (g *graph) vacuous(u *node) bool {
 
 	for i := range u.prereqs {
 		e := u.prereqs[i]
-		if e.v != nil && g.vacuous(e.v) && e.r.ismeta {
+		if e.v != nil && g.vacuous(e.v) && e.r.isMeta {
 			e.togo = true
 		} else {
 			vac = false
@@ -365,11 +365,11 @@ func (g *graph) ambiguous(u *node) {
 			le = e
 		} else {
 			if !le.r.equivRecipe(e.r) {
-				if le.r.ismeta && !e.r.ismeta {
+				if le.r.isMeta && !e.r.isMeta {
 					mkPrintRecipe(u.name, le.r.recipe, false)
 					le.togo = true
 					le = e
-				} else if !le.r.ismeta && e.r.ismeta {
+				} else if !le.r.isMeta && e.r.isMeta {
 					mkPrintRecipe(u.name, e.r.recipe, false)
 					e.togo = true
 					continue

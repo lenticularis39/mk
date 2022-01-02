@@ -59,7 +59,7 @@ import (
 
 // Try to unindent a recipe, so that it begins an column 0. (This is mainly for
 // recipes in python, or other indentation-significant languages.)
-func stripIndentation(s string, mincol int) string {
+func stripIndentation(s string, minCol int) string {
 	// trim leading whitespace
 	reader := bufio.NewReader(strings.NewReader(s))
 	output := ""
@@ -67,7 +67,7 @@ func stripIndentation(s string, mincol int) string {
 		line, err := reader.ReadString('\n')
 		col := 0
 		i := 0
-		for i < len(line) && col < mincol {
+		for i < len(line) && col < minCol {
 			c, w := utf8.DecodeRuneInString(line[i:])
 			if strings.IndexRune(" \t\n", c) >= 0 {
 				col += 1
@@ -90,11 +90,11 @@ func stripIndentation(s string, mincol int) string {
 func printIndented(out io.Writer, s string, ind int) {
 	indentation := strings.Repeat(" ", ind)
 	reader := bufio.NewReader(strings.NewReader(s))
-	firstline := true
+	firstLine := true
 	for {
 		line, err := reader.ReadString('\n')
 		if len(line) > 0 {
-			if !firstline {
+			if !firstLine {
 				io.WriteString(out, indentation)
 			}
 			io.WriteString(out, line)
@@ -102,7 +102,7 @@ func printIndented(out io.Writer, s string, ind int) {
 		if err != nil {
 			break
 		}
-		firstline = false
+		firstLine = false
 	}
 }
 
@@ -110,7 +110,7 @@ func printIndented(out io.Writer, s string, ind int) {
 func dorecipe(target string, u *node, e *edge, dryrun bool) bool {
 	vars := make(map[string][]string)
 	vars["target"] = []string{target}
-	if e.r.ismeta {
+	if e.r.isMeta {
 		if e.r.attributes.regex {
 			for i := range e.matches {
 				vars[fmt.Sprintf("stem%d", i)] = e.matches[i : i+1]

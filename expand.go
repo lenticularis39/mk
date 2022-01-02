@@ -88,12 +88,12 @@ func expand(input string, vars map[string][]string, expandBackticks bool) []stri
 
 		case '`':
 			if expandBackticks {
-				var outparts []string
-				outparts, off = expandBackQuoted(input[i:], vars)
-				if len(outparts) > 0 {
-					outparts[0] = expanded + outparts[0]
-					expanded = outparts[len(outparts)-1]
-					parts = append(parts, outparts[:len(outparts)-1]...)
+				var outParts []string
+				outParts, off = expandBackQuoted(input[i:], vars)
+				if len(outParts) > 0 {
+					outParts[0] = expanded + outParts[0]
+					expanded = outParts[len(outParts)-1]
+					parts = append(parts, outParts[:len(outParts)-1]...)
 				}
 			} else {
 				out = input
@@ -102,18 +102,18 @@ func expand(input string, vars map[string][]string, expandBackticks bool) []stri
 			}
 
 		case '$':
-			var outparts []string
-			outparts, off = expandSigil(input[i:], vars)
-			if len(outparts) > 0 {
-				firstpart := expanded + outparts[0]
-				if len(outparts) > 1 {
-					parts = append(parts, firstpart)
-					if len(outparts) > 2 {
-						parts = append(parts, outparts[1:len(outparts)-1]...)
+			var outParts []string
+			outParts, off = expandSigil(input[i:], vars)
+			if len(outParts) > 0 {
+				firstPart := expanded + outParts[0]
+				if len(outParts) > 1 {
+					parts = append(parts, firstPart)
+					if len(outParts) > 2 {
+						parts = append(parts, outParts[1:len(outParts)-1]...)
 					}
-					expanded = outparts[len(outparts)-1]
+					expanded = outParts[len(outParts)-1]
 				} else {
-					expanded = firstpart
+					expanded = firstPart
 				}
 			}
 		}
@@ -174,7 +174,7 @@ func expandSingleQuoted(input string) (string, int) {
 	if j < 0 {
 		return input, len(input)
 	}
-	return input[:j], (j + 1)
+	return input[:j], j + 1
 }
 
 // Expand something starting with at '$'.
@@ -358,5 +358,5 @@ func expandBackQuoted(input string, vars map[string][]string) ([]string, int) {
 		parts = append(parts, t.val)
 	}
 
-	return parts, (j + 1)
+	return parts, j + 1
 }

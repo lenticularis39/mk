@@ -60,7 +60,7 @@ type parser struct {
 	l        *lexer   // underlying lexer
 	name     string   // name of the file being parsed
 	path     string   // full path of the file being parsed
-	tokenbuf []token  // tokens consumed on the current statement
+	tokenBuf []token  // tokens consumed on the current statement
 	rules    *ruleSet // current ruleSet
 }
 
@@ -83,12 +83,12 @@ func (p *parser) basicErrorAtLine(what string, line int) {
 
 // Accept a token for use in the current statement being parsed.
 func (p *parser) push(t token) {
-	p.tokenbuf = append(p.tokenbuf, t)
+	p.tokenBuf = append(p.tokenBuf, t)
 }
 
 // Clear all the accepted tokens. Called when a statement is finished.
 func (p *parser) clear() {
-	p.tokenbuf = p.tokenbuf[:0]
+	p.tokenBuf = p.tokenBuf[:0]
 }
 
 // A parser state function takes a parser and the next token and returns a new
@@ -113,7 +113,7 @@ func parseInto(input string, name string, rules *ruleSet, path string) {
 	state := parseTopLevel
 	for t := range tokens {
 		if t.typ == tokenError {
-			p.basicErrorAtLine(l.errmsg, t.line)
+			p.basicErrorAtLine(l.errMsg, t.line)
 			break
 		}
 
@@ -153,14 +153,14 @@ func parseTopLevel(p *parser, t token) parserStateFun {
 func parsePipeInclude(p *parser, t token) parserStateFun {
 	switch t.typ {
 	case tokenNewline:
-		if len(p.tokenbuf) == 0 {
+		if len(p.tokenBuf) == 0 {
 			p.basicErrorAtToken("empty pipe include", t)
 		}
 
-		args := make([]string, len(p.tokenbuf)+1)
+		args := make([]string, len(p.tokenBuf)+1)
 		args[0] = "-c"
-		for i := 0; i < len(p.tokenbuf); i++ {
-			s := p.tokenbuf[i].val
+		for i := 0; i < len(p.tokenBuf); i++ {
+			s := p.tokenBuf[i].val
 			expanded := expand(s, p.rules.vars, false)
 			if len(expanded) > 0 {
 				s = expanded[0]
@@ -188,7 +188,7 @@ func parsePipeInclude(p *parser, t token) parserStateFun {
 	case tokenAssign:
 		fallthrough
 	case tokenWord:
-		p.tokenbuf = append(p.tokenbuf, t)
+		p.tokenBuf = append(p.tokenBuf, t)
 
 	default:
 		p.parseError("parsing piped include", "a shell command", t)
@@ -202,8 +202,8 @@ func parseRedirInclude(p *parser, t token) parserStateFun {
 	switch t.typ {
 	case tokenNewline:
 		filename := ""
-		for i := range p.tokenbuf {
-			filename += p.tokenbuf[i].val
+		for i := range p.tokenBuf {
+			filename += p.tokenBuf[i].val
 		}
 		expanded := expand(filename, p.rules.vars, false)
 		if len(expanded) > 0 {
@@ -212,7 +212,7 @@ func parseRedirInclude(p *parser, t token) parserStateFun {
 		fmt.Printf("parsed filename: %v\nexpanded filename: %v\n", filename, expanded)
 		file, err := os.Open(filename)
 		if err != nil {
-			p.basicErrorAtToken(fmt.Sprintf("cannot open %s", filename), p.tokenbuf[0])
+			p.basicErrorAtToken(fmt.Sprintf("cannot open %s", filename), p.tokenBuf[0])
 		}
 		input, _ := ioutil.ReadAll(file)
 
@@ -227,7 +227,7 @@ func parseRedirInclude(p *parser, t token) parserStateFun {
 		return parseTopLevel
 
 	case tokenWord:
-		p.tokenbuf = append(p.tokenbuf, t)
+		p.tokenBuf = append(p.tokenBuf, t)
 
 	default:
 		p.parseError("parsing include", "a file name", t)
@@ -268,7 +268,7 @@ func parseEqualsOrTarget(p *parser, t token) parserStateFun {
 func parseAssignment(p *parser, t token) parserStateFun {
 	switch t.typ {
 	case tokenNewline:
-		err := p.rules.executeAssignment(p.tokenbuf)
+		err := p.rules.executeAssignment(p.tokenBuf)
 		if err != nil {
 			p.basicErrorAtToken(err.what, err.where)
 		}
@@ -340,27 +340,27 @@ func parseRecipe(p *parser, t token) parserStateFun {
 
 	// find one or two colons
 	i := 0
-	for ; i < len(p.tokenbuf) && p.tokenbuf[i].typ != tokenColon; i++ {
+	for ; i < len(p.tokenBuf) && p.tokenBuf[i].typ != tokenColon; i++ {
 	}
 	j := i + 1
-	for ; j < len(p.tokenbuf) && p.tokenbuf[j].typ != tokenColon; j++ {
+	for ; j < len(p.tokenBuf) && p.tokenBuf[j].typ != tokenColon; j++ {
 	}
 
 	// rule has attributes
-	if j < len(p.tokenbuf) {
+	if j < len(p.tokenBuf) {
 		attribs := make([]string, 0)
 		for k := i + 1; k < j; k++ {
-			exparts := expand(p.tokenbuf[k].val, p.rules.vars, true)
+			exparts := expand(p.tokenBuf[k].val, p.rules.vars, true)
 			attribs = append(attribs, exparts...)
 		}
 		err := r.parseAttribs(attribs)
 		if err != nil {
 			msg := fmt.Sprintf("while reading a rule's attributes expected an attribute but found \"%c\".", err.found)
-			p.basicErrorAtToken(msg, p.tokenbuf[i+1])
+			p.basicErrorAtToken(msg, p.tokenBuf[i+1])
 		}
 
 		if r.attributes.regex {
-			r.ismeta = true
+			r.isMeta = true
 		}
 	} else {
 		j = i
@@ -369,7 +369,7 @@ func parseRecipe(p *parser, t token) parserStateFun {
 	// targets
 	r.targets = make([]pattern, 0)
 	for k := 0; k < i; k++ {
-		exparts := expand(p.tokenbuf[k].val, p.rules.vars, true)
+		exparts := expand(p.tokenBuf[k].val, p.rules.vars, true)
 		for i := range exparts {
 			targetstr := exparts[i]
 			r.targets = append(r.targets, pattern{spat: targetstr})
@@ -378,7 +378,7 @@ func parseRecipe(p *parser, t token) parserStateFun {
 				rpat, err := regexp.Compile("^" + targetstr + "$")
 				if err != nil {
 					msg := fmt.Sprintf("invalid regular expression: %q", err)
-					p.basicErrorAtToken(msg, p.tokenbuf[k])
+					p.basicErrorAtToken(msg, p.tokenBuf[k])
 				}
 				r.targets[len(r.targets)-1].rpat = rpat
 			} else {
@@ -396,11 +396,11 @@ func parseRecipe(p *parser, t token) parserStateFun {
 					rpat, err := regexp.Compile(patstr)
 					if err != nil {
 						msg := fmt.Sprintf("error compiling suffix rule. This is a bug. Error: %s", err)
-						p.basicErrorAtToken(msg, p.tokenbuf[k])
+						p.basicErrorAtToken(msg, p.tokenBuf[k])
 					}
 					r.targets[len(r.targets)-1].rpat = rpat
-					r.targets[len(r.targets)-1].issuffix = true
-					r.ismeta = true
+					r.targets[len(r.targets)-1].isSuffix = true
+					r.isMeta = true
 				}
 			}
 		}
@@ -408,8 +408,8 @@ func parseRecipe(p *parser, t token) parserStateFun {
 
 	// prereqs
 	r.prereqs = make([]string, 0)
-	for k := j + 1; k < len(p.tokenbuf); k++ {
-		exparts := expand(p.tokenbuf[k].val, p.rules.vars, true)
+	for k := j + 1; k < len(p.tokenBuf); k++ {
+		exparts := expand(p.tokenBuf[k].val, p.rules.vars, true)
 		r.prereqs = append(r.prereqs, exparts...)
 	}
 

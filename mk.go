@@ -56,10 +56,10 @@ import (
 )
 
 // True if we are ignoring timestamps and rebuilding everything.
-var rebuildall bool = false
+var rebuildAll bool = false
 
 // Set of targets for which we are forcing rebuild
-var rebuildtargets map[string]bool = make(map[string]bool)
+var rebuildTargets map[string]bool = make(map[string]bool)
 
 // Lock on standard out, messages don't get interleaved too much.
 var mkMsgMutex sync.Mutex
@@ -101,13 +101,13 @@ func finishSubproc() {
 func reserveExclusiveSubproc() {
 	exclusiveSubproc.Lock()
 	// Wait until everything is done running
-	stolen_subprocs := 0
+	stolenSubprocs := 0
 	subprocsRunningCond.L.Lock()
-	stolen_subprocs = subprocsAllowed - subprocsRunning
+	stolenSubprocs = subprocsAllowed - subprocsRunning
 	subprocsRunning = subprocsAllowed
-	for stolen_subprocs < subprocsAllowed {
+	for stolenSubprocs < subprocsAllowed {
 		subprocsRunningCond.Wait()
-		stolen_subprocs += subprocsAllowed - subprocsRunning
+		stolenSubprocs += subprocsAllowed - subprocsRunning
 		subprocsRunning = subprocsAllowed
 	}
 }
@@ -119,24 +119,10 @@ func finishExclusiveSubproc() {
 	exclusiveSubproc.Unlock()
 }
 
-// Ansi color codes.
-const (
-	ansiTermDefault   = "\033[0m"
-	ansiTermBlack     = "\033[30m"
-	ansiTermRed       = "\033[31m"
-	ansiTermGreen     = "\033[32m"
-	ansiTermYellow    = "\033[33m"
-	ansiTermBlue      = "\033[34m"
-	ansiTermMagenta   = "\033[35m"
-	ansiTermBright    = "\033[1m"
-	ansiTermUnderline = "\033[4m"
-)
-
 // Build a node's prereqs. Block until completed.
-//
 func mkNodePrereqs(g *graph, u *node, e *edge, prereqs []*node, dryrun bool,
 	required bool) nodeStatus {
-	prereqstat := make(chan nodeStatus)
+	prereqStat := make(chan nodeStatus)
 	pending := 0
 
 	// build prereqs that need building
@@ -147,7 +133,7 @@ func mkNodePrereqs(g *graph, u *node, e *edge, prereqs []*node, dryrun bool,
 			go mkNode(g, prereqs[i], dryrun, required)
 			fallthrough
 		case nodeStatusStarted:
-			prereqs[i].listeners = append(prereqs[i].listeners, prereqstat)
+			prereqs[i].listeners = append(prereqs[i].listeners, prereqStat)
 			pending++
 		}
 		prereqs[i].mutex.Unlock()
@@ -156,7 +142,7 @@ func mkNodePrereqs(g *graph, u *node, e *edge, prereqs []*node, dryrun bool,
 	// wait until all the prereqs are built
 	status := nodeStatusDone
 	for pending > 0 {
-		s := <-prereqstat
+		s := <-prereqStat
 		pending--
 		if s == nodeStatusFailed {
 			status = nodeStatusFailed
@@ -176,7 +162,7 @@ func mkNodePrereqs(g *graph, u *node, e *edge, prereqs []*node, dryrun bool,
 //  dryrun: Don't actually build anything, just pretend.
 //  required: Avoid building this node, unless its prereqs are out of date.
 //
-func mkNode(g *graph, u *node, dryrun bool, required bool) {
+func mkNode(g *graph, u *node, dryRun bool, required bool) {
 	// try to claim on this node
 	u.mutex.Lock()
 	if u.status != nodeStatusReady && u.status != nodeStatusNop {
@@ -188,10 +174,10 @@ func mkNode(g *graph, u *node, dryrun bool, required bool) {
 	u.mutex.Unlock()
 
 	// when finished, notify the listeners
-	finalstatus := nodeStatusDone
+	finalStatus := nodeStatusDone
 	defer func() {
 		u.mutex.Lock()
-		u.status = finalstatus
+		u.status = finalStatus
 		for i := range u.listeners {
 			u.listeners[i] <- u.status
 		}
@@ -199,13 +185,13 @@ func mkNode(g *graph, u *node, dryrun bool, required bool) {
 		u.mutex.Unlock()
 	}()
 
-	// there's no fucking rules, dude
+	// there aren't any tules
 	if len(u.prereqs) == 0 {
 		if !(u.r != nil && u.r.attributes.virtual) && !u.exists {
 			wd, _ := os.Getwd()
 			mkError(fmt.Sprintf("don't know how to make %s in %s\n", u.name, wd))
 		}
-		finalstatus = nodeStatusNop
+		finalStatus = nodeStatusNop
 		return
 	}
 
@@ -227,47 +213,47 @@ func mkNode(g *graph, u *node, dryrun bool, required bool) {
 		mkError(fmt.Sprintf("don't know how to make %s in %s", u.name, wd))
 	}
 
-	prereqs_required := required && (e.r.attributes.virtual || !u.exists)
-	mkNodePrereqs(g, u, e, prereqs, dryrun, prereqs_required)
+	prereqsRequired := required && (e.r.attributes.virtual || !u.exists)
+	mkNodePrereqs(g, u, e, prereqs, dryRun, prereqsRequired)
 
-	uptodate := true
+	upToDate := true
 	if !e.r.attributes.virtual {
 		u.updateTimestamp()
 		if !u.exists && required {
-			uptodate = false
+			upToDate = false
 		} else if u.exists || required {
 			for i := range prereqs {
 				if u.t.Before(prereqs[i].t) || prereqs[i].status == nodeStatusDone {
-					uptodate = false
+					upToDate = false
 				}
 			}
 		} else if required {
-			uptodate = false
+			upToDate = false
 		}
 	} else {
-		uptodate = false
+		upToDate = false
 	}
 
-	_, isrebuildtarget := rebuildtargets[u.name]
-	if isrebuildtarget || rebuildall {
-		uptodate = false
+	_, isRebuildTarget := rebuildTargets[u.name]
+	if isRebuildTarget || rebuildAll {
+		upToDate = false
 	}
 
 	// make another pass on the prereqs, since we know we need them now
-	if !uptodate {
-		mkNodePrereqs(g, u, e, prereqs, dryrun, true)
+	if !upToDate {
+		mkNodePrereqs(g, u, e, prereqs, dryRun, true)
 	}
 
 	// execute the recipe, unless the prereqs failed
-	if !uptodate && finalstatus != nodeStatusFailed && len(e.r.recipe) > 0 {
+	if !upToDate && finalStatus != nodeStatusFailed && len(e.r.recipe) > 0 {
 		if e.r.attributes.exclusive {
 			reserveExclusiveSubproc()
 		} else {
 			reserveSubproc()
 		}
 
-		if !dorecipe(u.name, u, e, dryrun) {
-			finalstatus = nodeStatusFailed
+		if !dorecipe(u.name, u, e, dryRun) {
+			finalStatus = nodeStatusFailed
 		}
 		u.updateTimestamp()
 
@@ -276,8 +262,8 @@ func mkNode(g *graph, u *node, dryrun bool, required bool) {
 		} else {
 			finishSubproc()
 		}
-	} else if finalstatus != nodeStatusFailed {
-		finalstatus = nodeStatusNop
+	} else if finalStatus != nodeStatusFailed {
+		finalStatus = nodeStatusNop
 	}
 }
 
@@ -316,29 +302,29 @@ func mkPrintRecipe(target string, recipe string, quiet bool) {
 }
 
 func main() {
-	var mkfilepath string
+	var mkfilePath string
 	var interactive bool
-	var dryrun bool
-	var shallowrebuild bool
+	var dryRun bool
+	var shallowRebuild bool
 	var quiet bool
 
-	flag.StringVar(&mkfilepath, "f", "mkfile", "use the given file as mkfile")
-	flag.BoolVar(&dryrun, "n", false, "print commands without actually executing")
-	flag.BoolVar(&shallowrebuild, "r", false, "force building of just targets")
-	flag.BoolVar(&rebuildall, "a", false, "force building of all dependencies")
+	flag.StringVar(&mkfilePath, "f", "mkfile", "use the given file as mkfile")
+	flag.BoolVar(&dryRun, "n", false, "print commands without actually executing")
+	flag.BoolVar(&shallowRebuild, "r", false, "force building of just targets")
+	flag.BoolVar(&rebuildAll, "a", false, "force building of all dependencies")
 	flag.IntVar(&subprocsAllowed, "p", 1, "maximum number of jobs to execute in parallel")
 	flag.BoolVar(&interactive, "i", false, "prompt before executing rules")
 	flag.BoolVar(&quiet, "q", false, "don't print recipes before executing them")
 	flag.Parse()
 
-	mkfile, err := os.Open(mkfilepath)
+	mkfile, err := os.Open(mkfilePath)
 	if err != nil {
 		mkError("no mkfile found")
 	}
 	input, _ := ioutil.ReadAll(mkfile)
 	mkfile.Close()
 
-	abspath, err := filepath.Abs(mkfilepath)
+	abspath, err := filepath.Abs(mkfilePath)
 	if err != nil {
 		mkError("unable to find mkfile's absolute path")
 	}
@@ -349,7 +335,7 @@ func main() {
 		env[vals[0]] = append(env[vals[0]], vals[1])
 	}
 
-	rs := parse(string(input), mkfilepath, abspath, env)
+	rs := parse(string(input), mkfilePath, abspath, env)
 	if quiet {
 		for i := range rs.rules {
 			rs.rules[i].attributes.quiet = true
@@ -361,7 +347,7 @@ func main() {
 	// build the first non-meta rule in the makefile, if none are given explicitly
 	if len(targets) == 0 {
 		for i := range rs.rules {
-			if !rs.rules[i].ismeta {
+			if !rs.rules[i].isMeta {
 				for j := range rs.rules[i].targets {
 					targets = append(targets, rs.rules[i].targets[j].spat)
 				}
@@ -375,9 +361,9 @@ func main() {
 		return
 	}
 
-	if shallowrebuild {
+	if shallowRebuild {
 		for i := range targets {
-			rebuildtargets[targets[i]] = true
+			rebuildTargets[targets[i]] = true
 		}
 	}
 
@@ -408,5 +394,5 @@ func main() {
 	}
 
 	g := buildgraph(rs, "")
-	mkNode(g, g.root, dryrun, true)
+	mkNode(g, g.root, dryRun, true)
 }

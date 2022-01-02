@@ -116,22 +116,22 @@ type lexer struct {
 	input     string     // input string to be lexed
 	output    chan token // channel on which tokens are sent
 	start     int        // token beginning
-	startcol  int        // column on which the token begins
+	startCol  int        // column on which the token begins
 	pos       int        // position within input
 	line      int        // line within input
 	col       int        // column within input
-	errmsg    string     // set to an appropriate error message when necessary
+	errMsg    string     // set to an appropriate error message when necessary
 	indented  bool       // true if the only whitespace so far on this line
-	barewords bool       // lex only a sequence of words
+	bareWords bool       // lex only a sequence of words
 }
 
-// A lexerStateFun is simultaneously the the state of the lexer and the next
+// A lexerStateFun is simultaneously the state of the lexer and the next
 // action the lexer will perform.
 type lexerStateFun func(*lexer) lexerStateFun
 
-func (l *lexer) lexerror(what string) {
-	if l.errmsg == "" {
-		l.errmsg = what
+func (l *lexer) lexError(what string) {
+	if l.errMsg == "" {
+		l.errMsg = what
 	}
 	l.emit(tokenError)
 }
@@ -184,13 +184,13 @@ func (l *lexer) next() rune {
 func (l *lexer) skip() {
 	l.next()
 	l.start = l.pos
-	l.startcol = l.col
+	l.startCol = l.col
 }
 
 func (l *lexer) emit(typ tokenType) {
-	l.output <- token{typ, l.input[l.start:l.pos], l.line, l.startcol}
+	l.output <- token{typ, l.input[l.start:l.pos], l.line, l.startCol}
 	l.start = l.pos
-	l.startcol = 0
+	l.startCol = 0
 }
 
 // Consume the next run if it is in the given string.
@@ -228,7 +228,7 @@ func (l *lexer) acceptUntil(invalid string) {
 	}
 
 	if l.peek() == eof {
-		l.lexerror(fmt.Sprintf("end of file encountered while looking for one of: %s", invalid))
+		l.lexError(fmt.Sprintf("end of file encountered while looking for one of: %s", invalid))
 	}
 }
 
@@ -256,7 +256,7 @@ func (l *lexer) skipUntil(invalid string) {
 	}
 
 	if l.peek() == eof {
-		l.lexerror(fmt.Sprintf("end of file encountered while looking for one of: %s", invalid))
+		l.lexError(fmt.Sprintf("end of file encountered while looking for one of: %s", invalid))
 	}
 }
 
@@ -268,7 +268,7 @@ func lex(input string) (*lexer, chan token) {
 }
 
 func lexWords(input string) (*lexer, chan token) {
-	l := &lexer{input: input, output: make(chan token), line: 1, col: 0, indented: true, barewords: true}
+	l := &lexer{input: input, output: make(chan token), line: 1, col: 0, indented: true, bareWords: true}
 	go l.run()
 	return l, l.output
 }
@@ -286,7 +286,7 @@ func lexTopLevel(l *lexer) lexerStateFun {
 		// emit a newline token if we are ending a non-empty line.
 		if l.peek() == '\n' && !l.indented {
 			l.next()
-			if l.barewords {
+			if l.bareWords {
 				return nil
 			} else {
 				l.emit(tokenNewline)
@@ -368,7 +368,7 @@ func lexDoubleQuotedWord(l *lexer) lexerStateFun {
 	}
 
 	if l.peek() == eof {
-		l.lexerror("end of file encountered while parsing a quoted string.")
+		l.lexError("end of file encountered while parsing a quoted string.")
 	}
 
 	l.next() // '"'
