@@ -49,6 +49,7 @@ package main
 import (
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -226,7 +227,7 @@ func expandSigil(input string, vars map[string][]string) ([]string, int) {
 		j := i
 		for j < len(input) {
 			c, w = utf8.DecodeRuneInString(input[j:])
-			if !(isalpha(c) || c == '_' || (j > i && isdigit(c))) {
+			if !(unicode.IsLetter(c) || c == '_' || (j > i && unicode.IsDigit(c))) {
 				break
 			}
 			j += w

@@ -51,6 +51,7 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -198,26 +199,12 @@ func (rs *ruleSet) add(r rule) {
 func isValidVarName(v string) bool {
 	for i := 0; i < len(v); {
 		c, w := utf8.DecodeRuneInString(v[i:])
-		if i == 0 && !(isalpha(c) || c == '_') {
-			return false
-		} else if !(isalnum(c) || c == '_') {
+		if (i == 0 && !(unicode.IsLetter(c) || c == '_')) || !(unicode.IsLetter(c) || unicode.IsDigit(c) || c == '_') {
 			return false
 		}
 		i += w
 	}
 	return true
-}
-
-func isdigit(c rune) bool {
-	return '0' <= c && c <= '9'
-}
-
-func isalpha(c rune) bool {
-	return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
-}
-
-func isalnum(c rune) bool {
-	return isalpha(c) || isdigit(c)
 }
 
 type assignmentError struct {
