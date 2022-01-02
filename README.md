@@ -28,8 +28,6 @@ improvements.
   1. Add an 'S' attribute to execute recipes with programs other than sh. This
      way, you don't have to separate your six line python script into its own
      file. Just stick it directly in the mkfile.
-  1. Pretty colors.
-
 
 # Usage
 
