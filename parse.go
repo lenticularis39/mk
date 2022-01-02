@@ -113,14 +113,15 @@ func parsePipeInclude(p *parser, t token) parserStateFun {
 			p.basicErrorAtToken("empty pipe include", t)
 		}
 
-		args := make([]string, len(p.tokenbuf))
+		args := make([]string, len(p.tokenbuf) + 1)
+		args[0] = "-c"
 		for i := 0; i < len(p.tokenbuf); i++ {
 			s := p.tokenbuf[i].val
 			expanded := expand(s, p.rules.vars, false)
 			if len(expanded) > 0 {
 				s = expanded[0]
 			}
-			args[i] = s
+			args[i + 1] = s
 		}
 
 		output, success := subprocess("sh", args, "", true)
